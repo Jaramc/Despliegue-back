@@ -114,3 +114,5 @@ desktop.ini
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+
+CLAUDE>md
