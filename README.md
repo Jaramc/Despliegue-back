@@ -85,7 +85,7 @@ Todos los servicios deben mostrar estado `healthy`.
 | **Swagger UI** | http://localhost:5000/swagger | — |
 | **RabbitMQ Management** | http://localhost:15672 | ver `RABBITMQ_*` en `.env` |
 | **MinIO Console** | http://localhost:9001 | ver `MINIO_*` en `.env` |
-| **pgAdmin** | http://localhost:5050 | ver `PGADMIN_*` en `.env` |
+| **phpMyAdmin** | http://localhost:5050 | ver `DB_*` en `.env` |
 | **Seq (logs)** | http://localhost:5341 | — |
 | **Qdrant Dashboard** | http://localhost:6333/dashboard | — |
 
@@ -126,9 +126,10 @@ docker compose exec auth-service dotnet test
 La disponibilidad se valida en dos capas. Primero, un **distributed lock en Redis**
 (`lock:property:{id}:{checkIn}:{checkOut}`, TTL 30s) bloquea el recurso durante
 la transacción para prevenir condiciones de carrera ante requests concurrentes.
-Segundo, una **constraint UNIQUE parcial en PostgreSQL**
-(`WHERE status = 'confirmed'`) garantiza integridad a nivel de datos incluso si
-el lock fallara.
+Segundo, una **constraint UNIQUE en MySQL** sobre `(property_id, check_in, check_out)`
+garantiza integridad a nivel de datos incluso si el lock fallara. Como MySQL 8 no
+soporta índices únicos parciales, la unicidad se limita a las reservas confirmadas
+mediante una columna generada que solo toma valor cuando `status = 'confirmed'`.
 
 #### Estandarización de horarios
 Toda reserva confirmada fija automáticamente el check-in a las **14:00** y el
@@ -194,7 +195,7 @@ API Gateway :5000 (YARP)
 | Mensajería | RabbitMQ + MassTransit |
 | Background jobs | Hangfire |
 | Notificaciones | Laravel 11 + Queues |
-| Base de datos | PostgreSQL 16 |
+| Base de datos | MySQL 8.4 |
 | Caché / Locks | Redis 7 |
 | Almacenamiento | MinIO (S3-compatible) |
 | Vector DB | Qdrant |
@@ -226,7 +227,7 @@ rental-ai-backend/
 │       └── RentalAI.Common/      # Middleware, helpers
 ├── infra/
 │   ├── docker/                   # Dockerfiles
-│   └── postgres/                 # Script de init (crea las bases por servicio)
+│   └── mysql/                    # Configuración / init de MySQL (opcional)
 ├── docs/
 │   └── architecture/             # ADRs y diagramas
 ├── .github/

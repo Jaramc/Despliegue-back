@@ -22,7 +22,7 @@ Core features:
 - .NET 10 (LTS), ASP.NET Core Web API, Entity Framework Core 10
 - MassTransit over RabbitMQ for asynchronous messaging
 - YARP as the API gateway
-- PostgreSQL 16, one database per service
+- MySQL 8.4, a single shared database
 - Redis 7 for cache, distributed locks, and sessions
 - MinIO for S3-compatible object storage
 - Qdrant for vector search behind the chatbot RAG
