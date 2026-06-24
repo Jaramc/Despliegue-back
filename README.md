@@ -12,7 +12,7 @@ Construida sobre **.NET 10** como núcleo, con **Laravel 11** para notificacione
 
 | Repo | Descripción |
 |------|-------------|
-| **rental-ai-backend** *(este repo)* | Microservicios .NET 10, worker Laravel, infraestructura |
+| **rental-ai-backend** *(este repo)* | Monolito modular .NET 10, worker Laravel, infraestructura |
 | [rental-ai-frontend](https://github.com/TU_USUARIO/rental-ai-frontend) | Aplicación Next.js 14 |
 
 ---
@@ -36,7 +36,7 @@ Construida sobre **.NET 10** como núcleo, con **Laravel 11** para notificacione
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/Jaramc/rental-ai-backend
+git clone https://github.com/TU_USUARIO/rental-ai-backend.git
 cd rental-ai-backend
 ```
 
@@ -85,7 +85,7 @@ Todos los servicios deben mostrar estado `healthy`.
 | **Swagger UI** | http://localhost:5000/swagger | — |
 | **RabbitMQ Management** | http://localhost:15672 | ver `RABBITMQ_*` en `.env` |
 | **MinIO Console** | http://localhost:9001 | ver `MINIO_*` en `.env` |
-| **phpMyAdmin** | http://localhost:5050 | ver `DB_*` en `.env` |
+| **phpMyAdmin** | http://localhost:8080 | usa las credenciales de MySQL (`MYSQL_*` en `.env`) |
 | **Seq (logs)** | http://localhost:5341 | — |
 | **Qdrant Dashboard** | http://localhost:6333/dashboard | — |
 
@@ -122,14 +122,26 @@ docker compose exec auth-service dotnet test
 
 ### Decisiones técnicas clave
 
+#### Monolito modular
+El backend es un solo proyecto ASP.NET Core organizado en módulos por carpeta
+(Auth, Properties, Booking, KYC, Users, Dashboard, Files), cada uno con límites
+claros. Para el alcance de esta prueba —un solo autor, sin necesidad de escalar
+partes por separado— un monolito modular entrega las mismas features con mucha
+menos complejidad operativa que un conjunto de microservicios, y se levanta
+entero con un comando. Los módulos se comunican en proceso; los límites se
+mantienen limpios para poder extraer un módulo a su propio servicio si algún día
+la carga lo justifica.
+
 #### Prevención de double-booking
 La disponibilidad se valida en dos capas. Primero, un **distributed lock en Redis**
 (`lock:property:{id}:{checkIn}:{checkOut}`, TTL 30s) bloquea el recurso durante
 la transacción para prevenir condiciones de carrera ante requests concurrentes.
-Segundo, una **constraint UNIQUE en MySQL** sobre `(property_id, check_in, check_out)`
-garantiza integridad a nivel de datos incluso si el lock fallara. Como MySQL 8 no
-soporta índices únicos parciales, la unicidad se limita a las reservas confirmadas
-mediante una columna generada que solo toma valor cuando `status = 'confirmed'`.
+Segundo, como respaldo de integridad, la inserción corre dentro de una
+transacción que bloquea la fila del inmueble con `SELECT ... FOR UPDATE`,
+verifica el solape de fechas e inserta. MySQL no tiene índices parciales ni
+*exclusion constraints*, así que esa verificación vive en la transacción y no en
+el motor: el lock de Redis es la primera barrera y la transacción garantiza la
+integridad incluso si Redis fallara.
 
 #### Estandarización de horarios
 Toda reserva confirmada fija automáticamente el check-in a las **14:00** y el
@@ -138,7 +150,7 @@ en el servidor al confirmar y no son editables por el usuario, de modo que la
 política es consistente en todo el sistema.
 
 #### Notificaciones omnicanal
-Los servicios .NET publican eventos de dominio en **RabbitMQ** (vía MassTransit) y
+La aplicación publica eventos de dominio en **RabbitMQ** (vía MassTransit) y
 el **worker de Laravel** los consume para despachar alertas por **correo** y
 **dentro de la aplicación**: confirmación de reserva, veredicto de KYC y
 recordatorios de llegada y salida. Desacoplar la mensajería del flujo principal
@@ -165,43 +177,41 @@ cookie anónima firmada. El sistema solicita login únicamente al confirmar una
 reserva o al guardar favoritos de forma permanente; al hacer login, fusiona
 automáticamente los favoritos anónimos con el perfil registrado.
 
-### Mapa de servicios
+### Mapa de la aplicación
 
 ```
 Cliente (Next.js)
     │
     ▼
-API Gateway :5000 (YARP)
+RentalAI.Api :5000 (ASP.NET Core)
     │
-    ├── /auth/*         → Auth Service
-    ├── /properties/*   → Properties Service
-    ├── /bookings/*     → Booking Service
-    ├── /kyc/*          → KYC Service
-    ├── /users/*        → Users Service
-    ├── /dashboard/*    → Dashboard Service
-    ├── /chat/*         → Chatbot Service
-    └── /files/*        → Files Service
+    ├── /auth/*         → módulo Auth
+    ├── /properties/*   → módulo Properties
+    ├── /bookings/*     → módulo Booking
+    ├── /kyc/*          → módulo KYC
+    ├── /users/*        → módulo Users
+    ├── /dashboard/*    → módulo Dashboard
+    └── /files/*        → módulo Files
              │
              ▼ (eventos vía RabbitMQ)
-    Notification Service (Laravel)
+    Notification Worker (Laravel)
 ```
 
 ### Stack completo
 
 | Capa | Tecnología |
 |------|-----------|
-| Servicios core | .NET 10 / ASP.NET Core |
-| ORM | Entity Framework Core 10 |
-| Mensajería | RabbitMQ + MassTransit |
+| Aplicación core | .NET 10 / ASP.NET Core (monolito modular) |
+| ORM | Entity Framework Core 10 (Pomelo MySQL) |
+| Mensajería | RabbitMQ + MassTransit (solo para notificaciones) |
 | Background jobs | Hangfire |
 | Notificaciones | Laravel 11 + Queues |
-| Base de datos | MySQL 8.4 |
+| Base de datos | MySQL 8.4 (LTS) |
 | Caché / Locks | Redis 7 |
 | Almacenamiento | MinIO (S3-compatible) |
 | Vector DB | Qdrant |
 | IA — OCR / Chat | OpenAI GPT-4o / GPT-4o mini |
 | Logging | Serilog → Seq |
-| API Gateway | YARP |
 
 ---
 
@@ -210,24 +220,23 @@ API Gateway :5000 (YARP)
 ```
 rental-ai-backend/
 ├── src/
-│   ├── gateway/                  # YARP API Gateway (.NET 10)
-│   ├── services/
-│   │   ├── RentalAI.Auth/
-│   │   ├── RentalAI.Properties/
-│   │   ├── RentalAI.Booking/
-│   │   ├── RentalAI.KYC/
-│   │   ├── RentalAI.Users/
-│   │   ├── RentalAI.Dashboard/
-│   │   ├── RentalAI.Chatbot/
-│   │   └── RentalAI.Files/
+│   ├── RentalAI.Api/             # Monolito modular (ASP.NET Core, .NET 10)
+│   │   ├── Modules/
+│   │   │   ├── Auth/
+│   │   │   ├── Properties/
+│   │   │   ├── Booking/
+│   │   │   ├── Kyc/
+│   │   │   ├── Users/
+│   │   │   ├── Dashboard/
+│   │   │   └── Files/
+│   │   └── Data/                 # DbContext y migraciones
 │   ├── workers/
 │   │   └── notification-service/ # Laravel 11
 │   └── shared/
-│       ├── RentalAI.Contracts/   # DTOs y eventos compartidos
-│       └── RentalAI.Common/      # Middleware, helpers
-├── infra/
-│   ├── docker/                   # Dockerfiles
-│   └── mysql/                    # Configuración / init de MySQL (opcional)
+│       ├── RentalAI.Contracts/   # Eventos de integración para el worker
+│       └── RentalAI.Common/      # Middleware, logging, health
+├── docker/
+│   └── mysql/init/               # Script de init (crea las bases)
 ├── docs/
 │   └── architecture/             # ADRs y diagramas
 ├── .github/
