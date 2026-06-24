@@ -20,9 +20,9 @@ public enum AuthError
     InvalidRefreshToken
 }
 
-public sealed record AuthOutcome(AuthError Error, TokenPair? Tokens)
+public sealed record AuthOutcome(AuthError Error, TokenPair? Tokens, Guid? UserId = null)
 {
-    public static AuthOutcome Success(TokenPair tokens) => new(AuthError.None, tokens);
+    public static AuthOutcome Success(TokenPair tokens, Guid? userId = null) => new(AuthError.None, tokens, userId);
 
     public static AuthOutcome Failed(AuthError error) => new(error, null);
 }

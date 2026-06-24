@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using RentalAI.Api.Modules.Users;
 using RentalAI.Common.Web;
 
 namespace RentalAI.Api.Modules.Auth;
@@ -81,12 +82,28 @@ public static class AuthModule
         };
     }
 
-    private static async Task<IResult> LoginAsync(LoginRequest request, AuthService authService, CancellationToken cancellationToken)
+    private static async Task<IResult> LoginAsync(
+        LoginRequest request,
+        HttpContext httpContext,
+        AuthService authService,
+        WishlistService wishlistService,
+        WishlistCookie wishlistCookie,
+        CancellationToken cancellationToken)
     {
         var outcome = await authService.LoginAsync(request, cancellationToken);
-        return outcome.Error == AuthError.None
-            ? Results.Ok(ToResponse(outcome.Tokens!))
-            : Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid credentials");
+        if (outcome.Error != AuthError.None)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid credentials");
+        }
+
+        var anonymousWishlist = wishlistCookie.Read(httpContext.Request);
+        if (anonymousWishlist.Count > 0 && outcome.UserId is { } userId)
+        {
+            await wishlistService.MergeAsync(userId, anonymousWishlist, cancellationToken);
+            wishlistCookie.Clear(httpContext.Response);
+        }
+
+        return Results.Ok(ToResponse(outcome.Tokens!));
     }
 
     private static async Task<IResult> RefreshAsync(RefreshRequest request, AuthService authService, CancellationToken cancellationToken)

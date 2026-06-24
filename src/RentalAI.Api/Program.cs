@@ -1,7 +1,18 @@
 using System.Text.Json.Serialization;
+using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.MySql;
 using Microsoft.EntityFrameworkCore;
 using RentalAI.Api.Data;
+using RentalAI.Api.Hosting;
 using RentalAI.Api.Modules.Auth;
+using RentalAI.Api.Modules.Booking;
+using RentalAI.Api.Modules.Dashboard;
+using RentalAI.Api.Modules.Files;
+using RentalAI.Api.Modules.Kyc;
+using RentalAI.Api.Modules.Notifications;
+using RentalAI.Api.Modules.Properties;
+using RentalAI.Api.Modules.Users;
 using RentalAI.Common.Logging;
 using RentalAI.Common.Web;
 using Scalar.AspNetCore;
@@ -32,6 +43,23 @@ builder.Services.AddAuthModule(jwtOptions);
 builder.Services.AddAuthorization();
 builder.Services.AddAppRateLimiting();
 
+builder.Services.AddFilesModule(builder.Configuration);
+builder.Services.AddPropertiesModule();
+builder.Services.AddBookingModule(builder.Configuration);
+builder.Services.AddKycModule();
+builder.Services.AddUsersModule();
+builder.Services.AddDashboardModule();
+builder.Services.AddNotificationsModule(builder.Configuration);
+
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseStorage(new MySqlStorage(
+        MySqlConnectionString.BuildForHangfire(builder.Configuration),
+        new MySqlStorageOptions { TablesPrefix = "hangfire_" })));
+builder.Services.AddHangfireServer();
+
 builder.Services
     .AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(tags: [HealthCheckExtensions.ReadyTag]);
@@ -53,17 +81,34 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization =
+    [
+        new HangfireDashboardAuthFilter(
+            builder.Configuration["HANGFIRE_DASHBOARD_USER"] ?? "admin",
+            builder.Configuration["HANGFIRE_DASHBOARD_PASSWORD"] ?? "admin")
+    ]
+});
+
 app.MapAppHealthChecks();
 app.MapAuthModule();
+app.MapPropertiesModule();
+app.MapBookingModule();
+app.MapKycModule();
+app.MapUsersModule();
+app.MapDashboardModule();
+app.MapNotificationsModule();
 
-await MigrateDatabaseAsync(app);
+await StartupAsync(app);
 
 app.Run();
 
-static async Task MigrateDatabaseAsync(WebApplication app)
+static async Task StartupAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var storage = scope.ServiceProvider.GetRequiredService<FileStorage>();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 
     for (var attempt = 1; attempt <= 10; attempt++)
@@ -71,7 +116,7 @@ static async Task MigrateDatabaseAsync(WebApplication app)
         try
         {
             await db.Database.MigrateAsync();
-            return;
+            break;
         }
         catch (Exception ex) when (attempt < 10)
         {
@@ -79,4 +124,6 @@ static async Task MigrateDatabaseAsync(WebApplication app)
             await Task.Delay(TimeSpan.FromSeconds(3));
         }
     }
+
+    await storage.EnsureBucketsAsync(CancellationToken.None);
 }

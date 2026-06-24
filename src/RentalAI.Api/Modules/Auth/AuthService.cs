@@ -46,7 +46,7 @@ public sealed class AuthService(AppDbContext db, IPasswordHasher<User> passwordH
 
         var tokens = IssueTokens(user);
         await db.SaveChangesAsync(cancellationToken);
-        return AuthOutcome.Success(tokens);
+        return AuthOutcome.Success(tokens, user.Id);
     }
 
     public async Task<AuthOutcome> RefreshAsync(string refreshToken, CancellationToken cancellationToken)

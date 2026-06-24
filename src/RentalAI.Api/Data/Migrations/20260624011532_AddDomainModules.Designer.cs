@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentalAI.Api.Data;
 
@@ -11,9 +12,11 @@ using RentalAI.Api.Data;
 namespace RentalAI.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260624011532_AddDomainModules")]
+    partial class AddDomainModules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -166,38 +169,6 @@ namespace RentalAI.Api.Data.Migrations
                     b.ToTable("kyc_verifications", (string)null);
                 });
 
-            modelBuilder.Entity("RentalAI.Api.Modules.Notifications.Notification", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "CreatedAt");
-
-                    b.ToTable("notifications", (string)null);
-                });
-
             modelBuilder.Entity("RentalAI.Api.Modules.Properties.Property", b =>
                 {
                     b.Property<Guid>("Id")
@@ -324,15 +295,6 @@ namespace RentalAI.Api.Data.Migrations
                 });
 
             modelBuilder.Entity("RentalAI.Api.Modules.Auth.RefreshToken", b =>
-                {
-                    b.HasOne("RentalAI.Api.Modules.Auth.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("RentalAI.Api.Modules.Notifications.Notification", b =>
                 {
                     b.HasOne("RentalAI.Api.Modules.Auth.User", null)
                         .WithMany()

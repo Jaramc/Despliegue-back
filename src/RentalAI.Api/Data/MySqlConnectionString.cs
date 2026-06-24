@@ -26,4 +26,15 @@ public static class MySqlConnectionString
 
         return builder.ConnectionString;
     }
+
+    public static string BuildForHangfire(IConfiguration configuration)
+    {
+        var builder = new MySqlConnectionStringBuilder(Build(configuration))
+        {
+            AllowUserVariables = true,
+            UseAffectedRows = false
+        };
+
+        return builder.ConnectionString;
+    }
 }
