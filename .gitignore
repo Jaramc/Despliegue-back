@@ -1,0 +1,117 @@
+# ── SECRETOS Y ENTORNO ──────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+infra/certs/
+
+# ── .NET / C# ───────────────────────────
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vscode/
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/Properties/PublishProfiles/
+
+# MSBuild
+MSBuildWorkspace/
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
+[Tt]est/*.Results/
+*.trx
+coverage.xml
+coverage*.json
+coverage*.cobertura.xml
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# ── LARAVEL (notification-service) ──────
+src/workers/notification-service/vendor/
+src/workers/notification-service/node_modules/
+src/workers/notification-service/.env
+src/workers/notification-service/.env.backup
+src/workers/notification-service/.env.production
+src/workers/notification-service/storage/logs/
+src/workers/notification-service/storage/framework/cache/
+src/workers/notification-service/storage/framework/sessions/
+src/workers/notification-service/storage/framework/views/
+src/workers/notification-service/bootstrap/cache/
+src/workers/notification-service/public/hot
+src/workers/notification-service/public/storage
+src/workers/notification-service/Homestead.yaml
+src/workers/notification-service/Homestead.json
+src/workers/notification-service/.phpunit.result.cache
+src/workers/notification-service/auth.json
+
+# ── DOCKER ──────────────────────────────
+# Datos persistentes generados en local
+infra/docker/data/
+infra/docker/pgdata/
+infra/docker/redis-data/
+infra/docker/rabbitmq-data/
+infra/docker/minio-data/
+infra/docker/seq-data/
+
+# ── SISTEMA OPERATIVO ───────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── HERRAMIENTAS ────────────────────────
+*.swp
+*.swo
+*~
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
