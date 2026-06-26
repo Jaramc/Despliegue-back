@@ -84,8 +84,7 @@ public sealed class KycService(
 
         var complete = !string.IsNullOrWhiteSpace(extracted.FirstName)
             && !string.IsNullOrWhiteSpace(extracted.LastName)
-            && !string.IsNullOrWhiteSpace(extracted.DocumentNumber)
-            && !string.IsNullOrWhiteSpace(extracted.DateOfBirth);
+            && !string.IsNullOrWhiteSpace(extracted.DocumentNumber);
 
         return complete
             ? (KycVerdict.Approved, null)
