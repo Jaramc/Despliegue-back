@@ -4,12 +4,13 @@ using System.Text.RegularExpressions;
 using Azure;
 using Azure.AI.FormRecognizer.DocumentAnalysis;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace RentalAI.Api.Modules.Kyc;
 
 public sealed record ExtractedIdentity(string? FirstName, string? LastName, string? DocumentNumber, string? DateOfBirth);
 
-public sealed class AzureDocumentClient(IConfiguration configuration)
+public sealed class AzureDocumentClient(IConfiguration configuration, ILogger<AzureDocumentClient> logger)
 {
     private static readonly Regex NumberPattern = new(@"\d[\d.]*\d", RegexOptions.Compiled);
 
@@ -41,16 +42,27 @@ public sealed class AzureDocumentClient(IConfiguration configuration)
             .Where(content => content.Length > 0)
             .ToList();
 
+        logger.LogInformation("KYC_OCR_RAW: {Text}", string.Join(" | ", lines));
+
         if (lines.Count == 0)
         {
             return null;
         }
 
-        return new ExtractedIdentity(
+        var identity = new ExtractedIdentity(
             FindValue(lines, "NOMBRES"),
             FindValue(lines, "APELLIDOS"),
             FindNumber(lines, "NUMERO", "NUIP"),
             FindValue(lines, "FECHA DE NACIMIENTO"));
+
+        logger.LogInformation(
+            "KYC_OCR_PARSED: FirstName={FirstName} LastName={LastName} DocumentNumber={DocumentNumber} DateOfBirth={DateOfBirth}",
+            identity.FirstName,
+            identity.LastName,
+            identity.DocumentNumber,
+            identity.DateOfBirth);
+
+        return identity;
     }
 
     private static string? FindValue(IReadOnlyList<string> lines, string label)
