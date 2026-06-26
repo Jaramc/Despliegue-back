@@ -38,8 +38,9 @@ public static class DashboardModule
         }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var fromDate = from ?? today.AddDays(-30);
-        var toDate = to ?? today;
+        var firstOfMonth = new DateOnly(today.Year, today.Month, 1);
+        var fromDate = from ?? firstOfMonth;
+        var toDate = to ?? firstOfMonth.AddMonths(1).AddDays(-1);
 
         var summary = await service.GetSummaryAsync(ownerId.Value, fromDate, toDate, cancellationToken);
         return Results.Ok(summary);
