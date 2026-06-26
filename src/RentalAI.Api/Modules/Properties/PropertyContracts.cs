@@ -29,6 +29,7 @@ public sealed record UpdatePropertyRequest(
 
 public sealed record PropertySummaryResponse(
     Guid Id,
+    Guid OwnerId,
     string Title,
     string City,
     string Country,
@@ -60,6 +61,7 @@ public sealed record PropertyDetailResponse(
 public sealed record PropertySearchResult(IReadOnlyList<PropertySummaryResponse> Items, int Page, int PageSize, int Total);
 
 public sealed record PropertyQuery(
+    Guid? OwnerId,
     string? City,
     string? Country,
     decimal? MinPrice,

@@ -116,6 +116,7 @@ public sealed class WishlistService(AppDbContext db)
             .Where(p => propertyIds.Contains(p.Id) && p.IsActive)
             .Select(p => new PropertySummaryResponse(
                 p.Id,
+                p.OwnerId,
                 p.Title,
                 p.City,
                 p.Country,

@@ -15,6 +15,11 @@ public sealed class PropertyService(AppDbContext db)
 
         var properties = db.Properties.AsNoTracking().Where(p => p.IsActive);
 
+        if (query.OwnerId is { } ownerId)
+        {
+            properties = properties.Where(p => p.OwnerId == ownerId);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.City))
         {
             properties = properties.Where(p => p.City == query.City);
@@ -59,6 +64,7 @@ public sealed class PropertyService(AppDbContext db)
             .Take(pageSize)
             .Select(p => new PropertySummaryResponse(
                 p.Id,
+                p.OwnerId,
                 p.Title,
                 p.City,
                 p.Country,

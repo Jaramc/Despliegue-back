@@ -46,6 +46,7 @@ public static class PropertiesModule
     }
 
     private static async Task<IResult> SearchAsync(
+        Guid? ownerId,
         string? city,
         string? country,
         decimal? minPrice,
@@ -58,7 +59,7 @@ public static class PropertiesModule
         int page = 1,
         int pageSize = 20)
     {
-        var query = new PropertyQuery(city, country, minPrice, maxPrice, guests, checkIn, checkOut, page, pageSize);
+        var query = new PropertyQuery(ownerId, city, country, minPrice, maxPrice, guests, checkIn, checkOut, page, pageSize);
         var result = await service.SearchAsync(query, cancellationToken);
         return Results.Ok(result);
     }
