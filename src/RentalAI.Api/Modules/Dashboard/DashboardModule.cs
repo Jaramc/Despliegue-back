@@ -24,6 +24,7 @@ public static class DashboardModule
         group.MapGet("", SummaryAsync);
         group.MapGet("/summary", SummaryAsync);
         group.MapGet("/export", ExportAsync);
+        group.MapGet("/export-bookings", ExportBookingsAsync);
 
         return endpoints;
     }
@@ -54,5 +55,18 @@ public static class DashboardModule
 
         var bytes = await service.ExportAsync(ownerId.Value, propertyId, from, to, cancellationToken);
         return Results.File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "bookings.xlsx");
+    }
+
+    private static async Task<IResult> ExportBookingsAsync(ClaimsPrincipal user, DashboardService service, CancellationToken cancellationToken)
+    {
+        var ownerId = user.GetUserId();
+        if (ownerId is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var bytes = await service.ExportBookingsAsync(ownerId.Value, cancellationToken);
+        var fileName = $"reservas-{DateTime.UtcNow:yyyyMMdd}.xlsx";
+        return Results.File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 }
